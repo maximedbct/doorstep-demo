@@ -1,0 +1,661 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>Doorstep Observer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: one phone-width column, header + scrolling screen + bottom nav. Public-service look, high legibility for use outdoors. */
+:root{
+  --bg:#F3F1EC; --surface:#FFFFFF; --fg:#1B2430; --muted:#4F5966; --line:#DCD7CB;
+  --brand:#0F5F63; --brand-soft:#E1EDEC; --on-brand:#FFFFFF;
+  --red:#A3201A; --amber:#94470A; --green:#2F6B3B; --on-status:#FFFFFF;
+  --amber-soft:#FBEBD8; --amber-ink:#6E3504; --green-soft:#E3EFE5; --green-ink:#2A5F35; --red-soft:#F9E3E1; --red-ink:#7E1813;
+  --font:'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11171B; --surface:#1B242A; --fg:#E8ECEE; --muted:#A7B1B9; --line:#2D3940;
+  --brand:#6DBDBA; --brand-soft:#16302F; --on-brand:#0A1C1D;
+  --red:#C2362D; --amber:#B0600F; --green:#3D8049; --on-status:#FFFFFF;
+  --amber-soft:#3A2915; --amber-ink:#F2C48F; --green-soft:#1C3222; --green-ink:#A3D6AC; --red-soft:#3C1A18; --red-ink:#F5ADA7;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11171B; --surface:#1B242A; --fg:#E8ECEE; --muted:#A7B1B9; --line:#2D3940;
+  --brand:#6DBDBA; --brand-soft:#16302F; --on-brand:#0A1C1D;
+  --red:#C2362D; --amber:#B0600F; --green:#3D8049; --on-status:#FFFFFF;
+  --amber-soft:#3A2915; --amber-ink:#F2C48F; --green-soft:#1C3222; --green-ink:#A3D6AC; --red-soft:#3C1A18; --red-ink:#F5ADA7;
+  color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:17px;line-height:1.45}
+*{box-sizing:border-box}
+button,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.app{max-width:460px;height:100%;margin:0 auto;display:flex;flex-direction:column;background:var(--bg)}
+.gut{padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+header.top{background:var(--brand);color:var(--on-brand);padding-block:18px 14px;display:flex;align-items:center;gap:12px}
+header.top .brand{font-size:13px;letter-spacing:.08em;text-transform:uppercase;opacity:.85}
+header.top h1{margin:0;font-size:24px;line-height:1.15;text-wrap:balance}
+header.top .sub{font-size:15px;opacity:.9}
+.iconbtn{width:44px;height:44px;flex-shrink:0;border-radius:12px;border:0;background:rgba(255,255,255,.16);color:inherit;display:flex;align-items:center;justify-content:center;cursor:pointer}
+main{flex:1;overflow-y:auto;padding-block:16px 24px;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--surface);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:6px;border:1px solid var(--line)}
+button.card{text-align:left;cursor:pointer;width:100%}
+button.card.next{border:2px solid var(--brand)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.name{font-size:19px;font-weight:700}
+.muted{color:var(--muted);font-size:15px}
+.chip{font-size:13px;font-weight:700;padding:4px 10px;border-radius:999px;white-space:nowrap;letter-spacing:.02em}
+.chip.todo{background:var(--line);color:var(--fg)}
+.chip.next{background:var(--brand-soft);color:var(--brand)}
+.chip.red{background:var(--red-soft);color:var(--red-ink)}
+.chip.amber{background:var(--amber-soft);color:var(--amber-ink)}
+.chip.green{background:var(--green-soft);color:var(--green-ink)}
+.sos{display:flex;align-items:center;gap:12px;background:var(--red);color:var(--on-status);border-radius:14px;padding:14px 16px;border:0;width:100%;text-align:left;cursor:pointer}
+.sos b{font-size:18px;display:block}
+.sos span{font-size:14px}
+ul.usual{margin:0;padding-left:20px;font-size:15px}
+.mic-wrap{display:flex;flex-direction:column;align-items:center;gap:8px;padding-block:6px}
+.mic{width:120px;height:120px;border-radius:999px;border:0;background:var(--brand);color:var(--on-brand);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative}
+.mic.rec{background:var(--red)}
+.mic.rec::after{content:"";position:absolute;inset:-8px;border-radius:999px;border:3px solid var(--red);opacity:.5;animation:pulse 1.2s ease-out infinite}
+@keyframes pulse{from{transform:scale(.95);opacity:.6}to{transform:scale(1.15);opacity:0}}
+.timer{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{min-height:44px;padding:0 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);cursor:pointer;font-size:15px}
+.tag[aria-pressed="true"]{background:var(--brand);color:var(--on-brand);border-color:var(--brand)}
+label.lbl{font-size:15px;font-weight:700}
+textarea{width:100%;min-height:96px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);padding:12px;font-size:16px;resize:vertical}
+.btn{min-height:52px;border-radius:14px;border:0;font-size:17px;font-weight:700;cursor:pointer;width:100%;padding:0 16px}
+.btn.primary{background:var(--brand);color:var(--on-brand)}
+.btn.primary:disabled{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:var(--green-soft);color:var(--green-ink)}
+.btn.outline-red{background:transparent;color:var(--red-ink);border:2px solid var(--red)}
+.btn.plain{background:var(--surface);border:1.5px solid var(--line)}
+.steps{display:flex;flex-direction:column;gap:12px;padding-top:24px}
+.step{display:flex;gap:12px;align-items:center;font-size:17px;color:var(--muted)}
+.step.done{color:var(--fg)}
+.dot{width:22px;height:22px;border-radius:999px;border:2px solid var(--line);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.step.done .dot{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.hero{border-radius:16px;padding:22px 18px;color:var(--on-status);display:flex;flex-direction:column;gap:8px}
+.hero.red{background:var(--red)} .hero.amber{background:var(--amber)} .hero.green{background:var(--green)}
+.hero .lvl{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.hero h2{margin:0;font-size:26px;line-height:1.15;text-wrap:balance}
+.hero p{margin:0;font-size:17px}
+.big999{font-size:56px;font-weight:700;letter-spacing:.04em;user-select:all}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:16px}
+.check svg{flex-shrink:0;margin-top:3px}
+h3{margin:0;font-size:16px}
+.signs{display:flex;flex-wrap:wrap;gap:6px}
+nav.bottom{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.bottom button{min-height:62px;border:0;background:none;font-size:14px;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer}
+nav.bottom button[aria-current="page"]{color:var(--brand);font-weight:700}
+.note{font-size:13px;color:var(--muted);text-align:center}
+.switch{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.switch input{width:22px;height:22px;accent-color:var(--brand)}
+.viewbar{display:flex;gap:6px;padding-block:8px;background:var(--surface);border-bottom:1px solid var(--line)}
+.viewbar .vlabel{font-size:12px;color:var(--muted);align-self:center;text-transform:uppercase;letter-spacing:.06em;padding-right:4px}
+.viewbar button{flex:1;min-height:40px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);font-size:14px;font-weight:700;cursor:pointer}
+.viewbar button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.app.wide{max-width:1080px}
+.consent{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--muted);padding-top:4px}
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand)}
+.askq{margin:0;font-size:24px;line-height:1.2;text-wrap:balance}
+.ask{gap:10px}
+.btn.answer{text-align:left;font-size:18px}
+.btn.copy,.btn.sm{display:flex;align-items:center;justify-content:center;gap:8px}
+.btn.sm{min-height:44px;font-size:15px;width:auto;padding:0 14px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:12px 16px;border-radius:12px;font-size:15px;max-width:calc(100% - 32px);z-index:20}
+.ngrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px;align-items:start}
+.ncol{display:flex;flex-direction:column;gap:12px;min-width:0}
+.h2{margin:0;font-size:20px}
+.frow{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 2.2em;gap:10px;align-items:center;font-size:15px}
+.fbar{height:12px;background:var(--bg);border-radius:999px;overflow:hidden}
+.ffill{display:block;height:100%;border-radius:999px}
+.ffill.green{background:var(--green)}.ffill.amber{background:var(--amber)}.ffill.red{background:var(--red)}.ffill.muted{background:var(--muted)}
+.fnum{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.caps{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font-size:14px;color:var(--muted);padding-top:8px;border-top:1px solid var(--line);margin-top:4px}
+.hq{margin:2px 0;font-size:15px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;padding-top:4px}
+.langrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center}
+select{min-height:40px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);font:inherit;font-size:15px;padding:0 10px}
+.linkbtn{background:none;border:0;color:var(--brand);font-weight:700;font-size:15px;min-height:40px;cursor:pointer;text-decoration:underline}
+.orow{font-size:15px;padding-block:6px;border-top:1px solid var(--line)}
+@media (prefers-reduced-motion: reduce){.mic.rec::after{animation:none}}
+</style>
+
+<div class="app" id="app">
+  <div class="viewbar gut" role="group" aria-label="Demo view"><span class="vlabel">Demo view</span><button type="button" id="vb-observer" aria-pressed="true">Observer</button><button type="button" id="vb-nurse" aria-pressed="false">Nurse team</button></div>
+  <header class="top gut" id="hdr"></header>
+  <main class="gut" id="screen" aria-live="polite"></main>
+  <nav class="bottom gut" aria-label="Main" id="nav">
+    <button type="button" data-go="round" id="nav-round">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"></path><path d="M5 10v10h14V10"></path></svg>Round</button>
+    <button type="button" data-go="report" id="nav-report">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"></rect><path d="M5 10v1a7 7 0 0 0 14 0v-1"></path><path d="M12 18v4"></path></svg>Report</button>
+    <button type="button" data-go="mine" id="nav-mine">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13"></path><path d="M8 12h13"></path><path d="M8 18h13"></path><path d="M3 6h.01"></path><path d="M3 12h.01"></path><path d="M3 18h.01"></path></svg>My reports</button>
+    <button type="button" data-go="help" id="nav-help">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"></path><path d="M12 17h.01"></path></svg>Help</button>
+  </nav>
+  <div class="toast" id="toast" role="status" hidden></div>
+</div>
+
+<script>
+(function(){
+  // ---- Fictional residents and scripted demo notes (prototype data) ----
+  var residents = [
+    {id:'patel', name:'Mrs Asha Patel', age:84, addr:'12 Elm Road', usual:['Answers the door within a minute','Chatty, knows your name','Walks to the corner shop most days'], family:true,
+     consent:{date:'12 Sep', share:'nurse team, GP, daughter (Priya)'}, checkOutcome:'none',
+     demo:"She took ages to come to the door and was holding on to the frame. Said she had a fall last night but she's fine. She's not herself, very quiet."},
+    {id:'okafor', name:'Mr Daniel Okafor', age:79, addr:'3 Mill Lane', usual:['Hard of hearing, knock loudly','Waves from the kitchen window'], family:false,
+     consent:{date:'3 Sep', share:'nurse team, GP, neighbour key holder'}, checkOutcome:'none',
+     demo:"I can see him through the window on the floor and he is not responding when I bang on the glass."},
+    {id:'hughes', name:'Mrs June Hughes', age:91, addr:'Flat 4, Rose Court', usual:['At the window by 10am','Collects her post straight away'], family:true,
+     consent:{date:'20 Aug', share:'nurse team, GP, daughter (Carol)'}, checkOutcome:'daughter',
+     demo:"Curtains still closed at eleven, yesterday's post still on the mat, she didn't answer."},
+    {id:'nowak', name:'Mrs Halina Nowak', age:87, addr:'27 Station Street', usual:['Speaks Polish and some English','Sharp, does the crossword'], family:true,
+     consent:{date:'1 Oct', share:'nurse team, GP, son (Marek)'}, checkOutcome:'none',
+     demo:"Pani Nowak jest bardzo zdezorientowana, nie wie jaki jest dzień i pytała mnie o męża, który nie żyje.",
+     translation:"Mrs Nowak is very confused, she doesn't know what day it is and asked me about her husband, who has died.", lang:'Polish'},
+    {id:'shah', name:'Mr Kiran Shah', age:76, addr:'9 Elm Road', usual:['Cooks for himself','Goes to the day centre on Thursdays'], family:false,
+     consent:{date:'15 Sep', share:'nurse team, GP, council care team'}, checkOutcome:'daycentre',
+     demo:"He's fine in himself but the fridge is almost empty and he said he hasn't been shopping for a week. The flat is very cold."},
+    {id:'brown', name:'Mrs Rita Brown', age:82, addr:'5 Canal Walk', usual:['Cheerful','Lives alone, nephew visits sometimes'], family:false,
+     consent:{date:'28 Sep', share:'nurse team, GP, council'}, checkOutcome:'none',
+     demo:"A man was shouting inside when I knocked. She came to the door and seemed scared, said her money keeps going missing."},
+    {id:'williams', name:'Mr Tom Williams', age:82, addr:'8 Elm Road', usual:['Gardens every morning','Likes a chat about football'], family:true,
+     consent:{date:'5 Sep', share:'nurse team, GP, son (Gareth)'}, checkOutcome:'found',
+     demo:"All fine, out in the garden, had a long chat about the match."}
+  ];
+
+  var TAGS = [
+    {id:'slow', label:'Slow to answer', sign:'Slower or unsteady', level:'clinical', pts:1},
+    {id:'fall', label:'Fall or hurt', sign:'Fall reported', level:'clinical', pts:2},
+    {id:'conf', label:'Confused', sign:'New confusion', level:'clinical', pts:2},
+    {id:'noans', label:"Didn't answer", sign:'No answer at the door', level:'noanswer'},
+    {id:'scared', label:'Seems scared', sign:'Possible safeguarding concern', level:'safeguard'},
+    {id:'eat', label:'Not eating', sign:'Not eating well', level:'social'},
+    {id:'cold', label:'Home very cold', sign:'Cold home', level:'social'}
+  ];
+
+  // ---- Simple triage rules (stand-in for the Agent Builder agent) ----
+  var RULES = [
+    {re:/not respond|unconscious|not breathing|can'?t wake|cannot wake|collapsed|chest pain|lots of blood|nie oddycha|nieprzytomn/, sign:'Not responding or collapsed', level:'red'},
+    {re:/shout|scared|frightened|money (keeps )?go|missing money|bruis|hit her|hit him/, sign:'Possible safeguarding concern', level:'safeguard'},
+    {re:/\bfell\b|\bfall\b|on the floor|tripped/, sign:'Fall reported', level:'clinical', pts:2},
+    {re:/confus|doesn'?t know what day|disorient|zdezorientowan/, sign:'New confusion', level:'clinical', pts:2},
+    {re:/took ages|slow to|unsteady|holding on|wobbly|dizzy/, sign:'Slower or unsteady', level:'clinical', pts:1},
+    {re:/breathless|short of breath|fever|very hot|shivering/, sign:'Breathless or feverish', level:'clinical', pts:2},
+    {re:/didn'?t answer|no answer|not answering/, sign:'No answer at the door', level:'noanswer'},
+    {re:/curtains (still )?closed|post (still )?on the mat|milk (still )?on the step/, sign:'Usual routine broken', level:'noanswer'},
+    {re:/not herself|not himself|very quiet|withdrawn/, sign:'Not their usual self', level:'clinical', pts:1},
+    {re:/fridge|hasn'?t been shopping|not eating|no food|hungry/, sign:'Not eating well', level:'social'},
+    {re:/very cold|no heating|freezing/, sign:'Cold home', level:'social'},
+    {re:/lonely|no one visits|isolated/, sign:'Lonely or isolated', level:'social'}
+  ];
+
+  // Follow-up questions the agent asks when a sign is ambiguous.
+  var FOLLOWUPS = [
+    {sign:'Fall reported', q:'Can they get up and walk on their own?', options:[
+      {label:'Yes, walking', effect:{pts:0}},
+      {label:"No, can't get up or walk", effect:{red:true, reason:"Can't get up after a fall"}},
+      {label:'Not sure', effect:{pts:1, reason:'Mobility after fall unclear'}}]},
+    {sign:'New confusion', q:'Did the confusion start in the last day or two?', options:[
+      {label:'Yes, it\'s new', effect:{pts:1, reason:'Sudden confusion'}},
+      {label:'No, it\'s been like this a while', effect:{pts:-1, reason:'Not a sudden change'}},
+      {label:'Not sure', effect:{pts:0}}]},
+    {sign:'Breathless or feverish', q:'Are they struggling to speak in full sentences?', options:[
+      {label:'Yes', effect:{red:true, reason:'Struggling to speak'}},
+      {label:'No', effect:{pts:0}},
+      {label:'Not sure', effect:{pts:1, reason:'Breathing unclear'}}]}
+  ];
+
+  // Score-based triage: one sign alone rarely sends a nurse.
+  // 4+ points = nurse visit, 2-3 = nurse phone call, 1 = watch at next visit. Thresholds are placeholders to agree with clinicians.
+  function collect(text, tagIds, r){
+    var t = (text||'').toLowerCase(), o = {signs:[], why:[], score:0, flags:{}, routineBreaks:0};
+    function add(item){
+      if (o.signs.indexOf(item.sign) >= 0) return;
+      o.signs.push(item.sign); o.flags[item.level] = true;
+      if (item.level === 'noanswer') o.routineBreaks++;
+      if (item.pts) { o.score += item.pts; o.why.push(item.sign+' +'+item.pts); }
+    }
+    RULES.forEach(function(x){ if (x.re.test(t)) add(x); });
+    TAGS.forEach(function(g){ if (tagIds.indexOf(g.id) >= 0) add(g); });
+    if (o.score > 0) {
+      if (r.age >= 85) { o.score += 1; o.why.push('Aged 85+ +1'); }
+      var prev = S.reports.filter(function(p){ return p.res === r.id && p.score > 0; }).length;
+      if (prev) { o.score += 1; o.why.push('Earlier concern this week +1'); }
+    }
+    return o;
+  }
+  function decide(o){
+    var f = o.flags;
+    o.safeguarding = false; o.social = !!f.social;
+    if (f.red) { o.level = 'red'; o.route = '999'; o.social = false; return o; }
+    if (o.score >= 4) { o.level = 'amber'; o.route = 'nurse'; }
+    else if (o.score >= 2) { o.level = 'amber'; o.route = 'call'; }
+    else if (f.safeguard) { o.level = 'amber'; o.route = 'safeguard'; o.social = false; return o; }
+    else if (o.score === 1) { o.level = 'green'; o.route = 'watch'; }
+    else if (f.noanswer) { o.level = 'amber'; o.route = 'check'; o.deadline = o.routineBreaks >= 2 ? 2 : 4; return o; }
+    else if (f.social) { o.level = 'green'; o.route = 'council'; o.social = false; }
+    else { o.level = 'green'; o.route = 'log'; }
+    if (f.safeguard) o.safeguarding = true;
+    return o;
+  }
+
+  // ---- State ----
+  var S = { view:'observer', screen:'round', current:'patel', seen:{williams:true}, reports:[], tags:[], draft:'', recording:false, secs:0, fromVoice:false, lang:'en-GB', teamFull:false, slots:4, last:null, pending:null, copyText:null };
+  var timerId = null, stepTimer = null, toastTimer = null, recog = null;
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  var LANGS = [['en-GB','English'],['pl-PL','Polish'],['ur-PK','Urdu'],['pa-IN','Punjabi'],['bn-BD','Bengali'],['ro-RO','Romanian']];
+  function langName(code){ for (var i=0;i<LANGS.length;i++) if (LANGS[i][0]===code) return LANGS[i][1]; return code; }
+  // Demo starts fresh every time the page opens: nothing is kept between visits.
+  try { localStorage.removeItem('doorstep-demo'); } catch(e) {}
+
+  function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function res(id){ for (var i=0;i<residents.length;i++) if (residents[i].id===id) return residents[i]; }
+  function nextId(){ for (var i=0;i<residents.length;i++) if (!S.seen[residents[i].id]) return residents[i].id; return null; }
+  function lc1(s){ return s.charAt(0).toLowerCase()+s.slice(1); }
+  function nowTime(offsetH){ return new Date(Date.now() + (offsetH||0)*3600000).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
+  var $ = function(id){ return document.getElementById(id); };
+  var ICON_BACK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>';
+  var ICON_TICK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>';
+  var ICON_COPY = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h10"></path></svg>';
+  var LEVEL_WORD = {red:'Red', amber:'Amber', green:'Green'};
+  var ROUTE_WORD = {'999':'999 called','nurse':'Nurse visit today','review':'Senior nurse reviewing','council':'Council care team','log':'Noted','check':'Checking first, no nurse yet','call':'Nurse phone call today','watch':'Watch at next visit','safeguard':'Council safeguarding'};
+
+  function header(title, sub, back){
+    $('hdr').innerHTML = (back ? '<button type="button" class="iconbtn" id="hdr-back" aria-label="Back">'+ICON_BACK+'</button>' : '') +
+      '<div><div class="brand">Doorstep'+(S.view==='nurse'?' · Nurse team':'')+'</div><h1>'+esc(title)+'</h1>'+(sub ? '<div class="sub">'+esc(sub)+'</div>' : '')+'</div>';
+    if (back) $('hdr-back').onclick = function(){ go(back); };
+  }
+
+  function toast(msg){
+    var t = $('toast'); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function(){ t.hidden = true; }, 3200);
+  }
+
+  function go(screen){ stopRec(); clearTimeout(stepTimer); S.screen = screen; S.copyText = null; render(); $('screen').scrollTop = 0; }
+
+  function setView(v){
+    stopRec(); clearTimeout(stepTimer); S.view = v; S.copyText = null;
+    if (v === 'observer' && (S.screen === 'nurse')) S.screen = 'round';
+    render(); $('screen').scrollTop = 0;
+  }
+
+  function render(){
+    $('vb-observer').setAttribute('aria-pressed', String(S.view==='observer'));
+    $('vb-nurse').setAttribute('aria-pressed', String(S.view==='nurse'));
+    $('app').classList.toggle('wide', S.view==='nurse');
+    $('nav').hidden = S.view === 'nurse';
+    if (S.view === 'nurse') { rNurse(); return; }
+    ['round','report','mine','help'].forEach(function(n){ var b = $('nav-'+n); if ((S.screen===n) || (n==='report' && (S.screen==='processing'||S.screen==='result'||S.screen==='ask'))) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
+    var fn = {round:rRound, report:rReport, ask:rAsk, processing:rProcessing, result:rResult, mine:rMine, help:rHelp}[S.screen] || rRound;
+    fn();
+  }
+
+  // ---- Copy for agent ----
+  function agentText(rep){
+    var r = res(rep.res), lines = [];
+    var earlier = S.reports.filter(function(p){ return p.res === r.id && p.id !== rep.id; });
+    lines.push('DOORSTEP OBSERVATION - please triage');
+    lines.push('Resident: '+r.name+', '+r.age+', '+r.addr+', lives alone (fictional test data)');
+    lines.push('Usual self: '+r.usual.join('; '));
+    lines.push('Consent: given '+r.consent.date+'. May share with: '+r.consent.share);
+    lines.push('Observer note at '+rep.time+': "'+(rep.text || '(no note, quick tags only)')+'"');
+    if (rep.spoken) lines.push('Spoken in '+rep.spoken+': please translate to English first.');
+    if (rep.translated) lines.push('Translated from '+rep.translated.lang+': "'+rep.translated.text+'"');
+    if (rep.tags.length) lines.push('Quick tags: '+rep.tags.map(function(id){ for (var i=0;i<TAGS.length;i++) if (TAGS[i].id===id) return TAGS[i].label; return id; }).join(', '));
+    if (rep.answer) lines.push('Follow-up: '+rep.answer.q+' Answer: '+rep.answer.a);
+    lines.push('Earlier reports this week: '+(earlier.length ? earlier.map(function(p){ return p.time+' '+ROUTE_WORD[p.route]; }).join('; ') : 'none'));
+    lines.push('App suggestion: '+LEVEL_WORD[rep.level]+', '+ROUTE_WORD[rep.route]+(rep.why && rep.why.length ? ' (score '+rep.score+': '+rep.why.join(', ')+')' : ''));
+    lines.push('');
+    lines.push('Please check this against the soft-signs and routing rules, give your own routing (red / amber / green and who should act), and write a short handover for the community nurse.');
+    return lines.join('\n');
+  }
+  function copyFor(rep){
+    var text = agentText(rep);
+    function fallback(){ S.copyText = text; render(); var box = $('copybox'); if (box) { box.focus(); box.select(); } toast('Select the text and copy it'); }
+    try {
+      navigator.clipboard.writeText(text).then(function(){ toast('Copied. Paste it into the Doorstep agent in Copilot.'); }, fallback);
+    } catch(e) { fallback(); }
+  }
+  function copyBoxHtml(){
+    if (!S.copyText) return '';
+    return '<section class="card"><label class="lbl" for="copybox">Text for the Doorstep agent</label><textarea id="copybox" readonly style="min-height:200px;font-size:14px">'+esc(S.copyText)+'</textarea></section>';
+  }
+
+  // ---- Fast-forward the "checking first" ladder ----
+  function fastForward(rep){
+    var r = res(rep.res);
+    if (r.checkOutcome === 'daycentre') {
+      rep.route = 'log'; rep.level = 'green'; rep.resolved = 'Reached at '+nowTime(1)+': at the day centre (Thursday). No visit needed.';
+    } else if (r.checkOutcome === 'daughter') {
+      rep.route = 'log'; rep.level = 'green'; rep.resolved = 'Reached at '+nowTime(1)+': her daughter says she is staying with her this week. No visit needed.';
+    } else if (r.checkOutcome === 'found') {
+      rep.route = 'log'; rep.level = 'green'; rep.resolved = 'Reached at '+nowTime(1)+': answered the phone, was at the shops. No visit needed.';
+    } else {
+      if (S.teamFull || S.slots <= 0) { rep.route = 'review'; rep.resolved = 'Not reached by '+nowTime(rep.deadline)+'. Phone, key holder and second knock all failed. Sent to the senior nurse.'; }
+      else { S.slots--; rep.route = 'nurse'; rep.resolved = 'Not reached by '+nowTime(rep.deadline)+'. Phone, key holder and second knock all failed. Nurse visit booked.'; }
+      rep.level = 'amber';
+    }
+    rep.wasCheck = true;
+    render();
+    toast(rep.route === 'log' ? 'Resolved without a nurse' : 'Escalated to the nurse team');
+  }
+
+  // ---- Observer screens ----
+  function rRound(){
+    var seenCount = residents.filter(function(r){ return S.seen[r.id]; }).length;
+    header('Tuesday round', residents.length+' Doorstep residents · '+seenCount+' seen');
+    var nx = nextId(), html = '';
+    residents.forEach(function(r){
+      var rep = latestFor(r.id), chip;
+      if (rep) chip = '<span class="chip '+rep.level+'">'+LEVEL_WORD[rep.level]+' · sent</span>';
+      else if (S.seen[r.id]) chip = '<span class="chip green">Seen · all fine</span>';
+      else if (r.id === nx) chip = '<span class="chip next">Next stop</span>';
+      else chip = '<span class="chip todo">Not yet</span>';
+      html += '<button type="button" class="card'+(r.id===nx?' next':'')+'" data-res="'+r.id+'" id="res-'+r.id+'">'+
+        '<span class="row"><span class="name">'+esc(r.name)+', '+r.age+'</span>'+chip+'</span>'+
+        '<span class="muted">'+esc(r.addr)+'</span>'+
+        '<span style="font-size:15px">Usually: '+esc(lc1(r.usual[0]))+'</span></button>';
+    });
+    html += '<p class="note">Fictional residents for the prototype. Tap a resident to report.</p>';
+    $('screen').innerHTML = html;
+    Array.prototype.forEach.call(document.querySelectorAll('[data-res]'), function(b){ b.onclick = function(){ openReport(b.getAttribute('data-res')); }; });
+  }
+
+  function openReport(id){ S.current = id; S.tags = []; S.draft = ''; S.fromVoice = false; S.secs = 0; go('report'); }
+
+  function rReport(){
+    var r = res(S.current) || res(nextId() || 'patel'); S.current = r.id;
+    header('Report', r.name+' · '+r.addr, 'round');
+    var tagsHtml = TAGS.map(function(g){ return '<button type="button" class="tag" id="tag-'+g.id+'" data-tag="'+g.id+'" aria-pressed="'+(S.tags.indexOf(g.id)>=0)+'">'+esc(g.label)+'</button>'; }).join('');
+    $('screen').innerHTML =
+      '<button type="button" class="sos" id="sos"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg><span><b>Emergency? Call 999 first</b><span>Not breathing, collapsed, can\'t be woken</span></span></button>'+
+      '<section class="card"><span class="name">'+esc(r.name)+', '+r.age+'</span><span style="font-weight:700;font-size:15px">Their usual self</span><ul class="usual">'+r.usual.map(function(u){return '<li>'+esc(u)+'</li>';}).join('')+'</ul>'+
+        '<span class="consent"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>Consent given '+esc(r.consent.date)+' · shared with '+esc(r.consent.share)+'</span></section>'+
+      '<div class="mic-wrap"><button type="button" class="mic'+(S.recording?' rec':'')+'" id="mic" aria-label="'+(S.recording?'Stop recording':'Start recording a voice note')+'">'+
+        (S.recording ? '<svg width="44" height="44" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>' : '<svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"></rect><path d="M5 10v1a7 7 0 0 0 14 0v-1"></path><path d="M12 18v4"></path></svg>')+
+      '</button><div class="timer" id="timer">'+(S.recording ? '0:'+String(S.secs).padStart(2,'0')+' / 0:20' : 'Tap to record · 20 s')+'</div><div class="muted" style="text-align:center">Say what\'s different today. Any language is fine.</div>'+
+      '<div class="langrow"><label for="lang" class="muted">Speaking</label><select id="lang">'+LANGS.map(function(l){ return '<option value="'+l[0]+'"'+(l[0]===S.lang?' selected':'')+'>'+l[1]+'</option>'; }).join('')+'</select><button type="button" class="linkbtn" id="demo-note">Use demo note</button></div></div>'+
+      '<div style="display:flex;flex-direction:column;gap:8px"><span class="lbl">Or tap what you noticed</span><div class="tags">'+tagsHtml+'</div></div>'+
+      '<div style="display:flex;flex-direction:column;gap:6px"><label class="lbl" for="note">'+(S.fromVoice ? 'Your note (from voice, edit if needed)' : 'Note (optional)')+'</label><textarea id="note" placeholder="What did you notice?">'+esc(S.draft)+'</textarea></div>'+
+      '<button type="button" class="btn primary" id="send">Send report</button>'+
+      '<button type="button" class="btn ghost" id="fine">All fine today</button>'+
+      '<p class="note">'+(SR ? 'Your browser turns speech into text. Use fictional details only.' : 'Live voice isn\'t available in this browser, so the mic uses a scripted demo note.')+'</p>';
+    $('sos').onclick = function(){ submit(true); };
+    $('mic').onclick = toggleRec;
+    $('lang').onchange = function(e){ S.lang = e.target.value; };
+    $('demo-note').onclick = function(){ stopRec(); S.draft = r.demo; S.fromVoice = true; S.lang = 'en-GB'; rReport(); };
+    $('note').oninput = function(e){ S.draft = e.target.value; updateSend(); };
+    Array.prototype.forEach.call(document.querySelectorAll('[data-tag]'), function(b){ b.onclick = function(){
+      var id = b.getAttribute('data-tag'), i = S.tags.indexOf(id); if (i>=0) S.tags.splice(i,1); else S.tags.push(id);
+      b.setAttribute('aria-pressed', String(i<0)); updateSend(); }; });
+    $('send').onclick = function(){ submit(false); };
+    $('fine').onclick = function(){ S.seen[r.id] = true; go('round'); };
+    updateSend();
+  }
+  function updateSend(){ var b = $('send'); if (b) b.disabled = !(S.draft.trim() || S.tags.length); }
+
+  // Live voice: the browser's own speech-to-text where available; otherwise a scripted demo note.
+  function toggleRec(){
+    if (S.recording) { if (recog) { try { recog.stop(); } catch(e) {} } else finishDemo(); return; }
+    S.recording = true; S.secs = 0; rReport();
+    timerId = setInterval(function(){ S.secs++; var t = $('timer'); if (t) t.textContent = '0:'+String(S.secs).padStart(2,'0')+' / 0:20';
+      if (S.secs >= 20) { if (recog) { try { recog.stop(); } catch(e) {} } else finishDemo(); } }, 1000);
+    if (!SR) return;
+    var base = S.draft.trim();
+    try { recog = new SR(); } catch(e) { recog = null; return; }
+    recog.lang = S.lang; recog.interimResults = true; recog.continuous = true;
+    recog.onresult = function(e){
+      var fin = '', interim = '';
+      for (var i=0;i<e.results.length;i++) { if (e.results[i].isFinal) fin += e.results[i][0].transcript+' '; else interim += e.results[i][0].transcript; }
+      S.draft = ((base ? base+' ' : '')+fin+interim).trim();
+      var n = $('note'); if (n) n.value = S.draft; updateSend();
+    };
+    recog.onerror = function(e){
+      recog = null; stopRec();
+      if (e.error === 'no-speech') { toast("Didn't catch that. Tap the mic and try again."); rReport(); return; }
+      toast('Microphone not available here. Using the demo note.');
+      S.draft = res(S.current).demo; S.fromVoice = true; S.lang = 'en-GB'; rReport();
+    };
+    recog.onend = function(){ if (!recog) return; recog = null; stopRec(); S.fromVoice = !!S.draft.trim(); rReport(); };
+    try { recog.start(); } catch(e) { recog = null; }
+  }
+  function finishDemo(){ stopRec(); var r = res(S.current); S.draft = r.demo; S.fromVoice = true; rReport(); }
+  function stopRec(){
+    if (timerId) { clearInterval(timerId); timerId = null; }
+    if (recog) { var x = recog; recog = null; try { x.abort(); } catch(e) {} }
+    S.recording = false;
+  }
+
+  function submit(emergency){
+    var r = res(S.current), text = S.draft;
+    var translated = (r.translation && text === r.demo) ? {lang:r.lang, text:r.translation} : null;
+    var o;
+    if (emergency) { o = {signs:['Observer pressed emergency'], why:[], score:0, flags:{red:true}, routineBreaks:0}; }
+    else { o = collect(translated ? text+' '+translated.text : text, S.tags, r); }
+    var spoken = (!translated && S.fromVoice && S.lang !== 'en-GB') ? langName(S.lang) : null;
+    S.pending = {o:o, r:r, text:text, translated:translated, spoken:spoken, tags:S.tags.slice(), answer:null};
+    var fu = null;
+    if (!emergency && !o.flags.red) for (var i=0;i<FOLLOWUPS.length;i++) if (o.signs.indexOf(FOLLOWUPS[i].sign) >= 0) { fu = FOLLOWUPS[i]; break; }
+    if (fu) { S.pending.fu = fu; go('ask'); } else finalize();
+  }
+
+  function rAsk(){
+    var p = S.pending, fu = p.fu;
+    header('One quick question', p.r.name, null);
+    $('screen').innerHTML =
+      '<section class="card ask"><span class="eyebrow">The agent needs one more detail</span><h2 class="askq">'+esc(fu.q)+'</h2>'+
+      '<span class="muted">Because you reported: '+esc(lc1(fu.sign))+'.</span></section>'+
+      fu.options.map(function(op, k){ return '<button type="button" class="btn plain answer" id="ans-'+k+'" data-k="'+k+'">'+esc(op.label)+'</button>'; }).join('')+
+      '<p class="note">Asking only when it changes the decision keeps reports under 30 seconds.</p>';
+    Array.prototype.forEach.call(document.querySelectorAll('[data-k]'), function(b){ b.onclick = function(){
+      var op = fu.options[+b.getAttribute('data-k')], e = op.effect, o = p.o;
+      p.answer = {q:fu.q, a:op.label};
+      if (e.red) { o.flags.red = true; o.signs.push(e.reason); }
+      else if (e.pts) { o.score = Math.max(0, o.score + e.pts); o.why.push(e.reason+' '+(e.pts>0?'+':'')+e.pts); }
+      finalize();
+    }; });
+  }
+
+  function finalize(){
+    var p = S.pending, o = decide(p.o);
+    if (o.route === 'nurse') { if (S.teamFull || S.slots <= 0) o.route = 'review'; else S.slots--; }
+    var rep = {id:Date.now(), res:p.r.id, text:p.text, translated:p.translated, tags:p.tags, answer:p.answer, spoken:p.spoken, time:nowTime(0),
+      level:o.level, route:o.route, signs:o.signs, why:o.why, score:o.score, safeguarding:o.safeguarding, social:o.social, deadline:o.deadline};
+    S.reports.unshift(rep); S.seen[p.r.id] = true; S.last = rep; S.pending = null;
+    go('processing');
+  }
+
+  function rProcessing(){
+    var r = res(S.last.res);
+    header('Sending…', r.name, null);
+    var steps = [S.last.translated ? 'Translating from '+S.last.translated.lang : 'Reading your note', 'Comparing with '+r.name.replace(/^(Mrs|Mr|Ms|Miss) /,'').split(' ')[0]+"'s usual self", 'Checking soft signs', 'Sending to the right team'];
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var i = 0;
+    function draw(){
+      $('screen').innerHTML = '<div class="steps">'+steps.map(function(s,k){ return '<div class="step'+(k<i?' done':'')+'"><span class="dot">'+(k<i?ICON_TICK:'')+'</span>'+esc(s)+'</div>'; }).join('')+'</div>';
+    }
+    draw();
+    (function tick(){ stepTimer = setTimeout(function(){ i++; if (i > steps.length) { S.screen = 'result'; render(); return; } draw(); tick(); }, reduce ? 150 : 450); })();
+  }
+
+  function outcome(rep){
+    var r = res(rep.res), hero, next = [];
+    if (rep.level === 'red') {
+      hero = '<div class="hero red"><span class="lvl">Red</span><h2>Call 999 now</h2><span class="big999">999</span><p>Stay with '+esc(r.name)+' if it\'s safe. Give the address: '+esc(r.addr)+'.</p></div>';
+      next.push('The community nurse team has been told');
+    } else if (rep.route === 'check') {
+      hero = '<div class="hero amber"><span class="lvl">Amber · checking first</span><h2>We\'re trying to reach '+esc(r.name)+'</h2><p>No nurse yet. You don\'t need to wait or do anything else.</p></div>';
+      next.push('Checking known plans: day centre, appointments, hospital stays');
+      next.push('Calling '+esc(r.name)+' now');
+      next.push(r.family ? 'Then calling their key holder (family)' : 'Then calling the neighbour who holds a key');
+      next.push('Asking the next visitor today to knock again');
+      next.push('<b>If no one reaches them by '+nowTime(rep.deadline)+'</b>, a nurse visit is booked'+(rep.deadline===2 ? ' (sooner, because their routine is broken too)' : ''));
+    } else if (rep.route === 'call') {
+      hero = '<div class="hero amber"><span class="lvl">Amber · nurse call</span><h2>A nurse will phone '+esc(r.name)+' today</h2><p>The nurse decides on the call if a visit is needed. You don\'t need to do anything else.</p></div>';
+      next.push('Added to the nurse team\'s call list (about 5 minutes, no visit slot used)');
+      next.push('If the call raises worries, a visit is booked');
+    } else if (rep.route === 'watch') {
+      hero = '<div class="hero green"><span class="lvl">Green · watch</span><h2>Noted. We\'ll check again tomorrow</h2><p>One small change on its own is usually nothing. Thank you for noticing.</p></div>';
+      next.push('The next visitor is asked to look out for this');
+      next.push('If it happens again this week, a nurse phones them');
+    } else if (rep.route === 'safeguard') {
+      hero = '<div class="hero amber"><span class="lvl">Amber · safeguarding</span><h2>Passed to the council\'s safeguarding team</h2><p>They follow up today. Don\'t confront anyone. If someone is in danger now, call 999.</p></div>';
+      next.push('Sent to Elmside Council adult safeguarding');
+      next.push('No nurse needed unless they ask for one');
+    } else if (rep.route === 'review') {
+      hero = '<div class="hero amber"><span class="lvl">Amber</span><h2>A senior nurse will review this within the hour</h2><p>The nurse team is full today. They\'ll decide on a visit or a call. You don\'t need to do anything else.</p></div>';
+      next.push('Flagged to the senior nurse on duty');
+    } else if (rep.route === 'nurse') {
+      hero = '<div class="hero amber"><span class="lvl">Amber</span><h2>A nurse will visit '+esc(r.name)+' today</h2><p>You don\'t need to do anything else. Thank you.</p></div>';
+      next.push('Sent to the community nurse team, visit slot held');
+    } else if (rep.route === 'council') {
+      hero = '<div class="hero green"><span class="lvl">Green</span><h2>Passed to the council\'s care team</h2><p>No nurse needed today. Thank you for spotting this.</p></div>';
+      next.push('Sent to Elmside Council adult social care');
+    } else {
+      hero = '<div class="hero green"><span class="lvl">Green</span><h2>'+(rep.resolved ? 'Resolved, no visit needed' : 'Thanks, noted')+'</h2><p>We\'ll watch for changes over the next visits.</p></div>';
+      next.push('Added to their record');
+    }
+    if (rep.resolved) next.unshift('<b>'+esc(rep.resolved)+'</b>');
+    if (rep.safeguarding) next.push('Also sent to the council safeguarding team');
+    if (rep.social) next.push('Also sent to the council care team (food, heating)');
+    if (r.family && rep.level !== 'green' && rep.route !== 'check' && rep.route !== 'safeguard' && !rep.safeguarding) next.push('Family gets a text (they agreed to this)');
+    if (rep.spoken) next.unshift('<span class="muted">Recorded in '+esc(rep.spoken)+'. In the real product the agent translates it before triage. Use Copy for agent.</span>');
+    if (rep.answer) next.unshift('<span class="muted">You answered: '+esc(rep.answer.q)+' '+esc(rep.answer.a)+'</span>');
+    if (rep.why && rep.why.length) next.unshift('<span class="muted">Why: '+esc(rep.why.join(', '))+' = '+rep.score+' points. 4+ visit, 2–3 nurse call, 1 watch.</span>');
+    return {hero:hero, next:next};
+  }
+
+  function rResult(){
+    var rep = S.last, r = res(rep.res), oc = outcome(rep);
+    header('Report sent', r.name, null);
+    var signs = rep.signs.length ? '<div class="signs">'+rep.signs.map(function(s){return '<span class="chip '+rep.level+'">'+esc(s)+'</span>';}).join('')+'</div>' : '<span class="muted">No warning signs picked up.</span>';
+    $('screen').innerHTML = copyBoxHtml() + oc.hero +
+      '<section class="card"><h3>What we understood</h3>'+signs+
+        (rep.translated ? '<p style="margin:4px 0 0;font-size:15px"><b>Translated from '+esc(rep.translated.lang)+':</b> '+esc(rep.translated.text)+'</p>' : (rep.text ? '<p style="margin:4px 0 0;font-size:15px">"'+esc(rep.text)+'"</p>' : ''))+
+        '<p style="margin:4px 0 0" class="muted">Usually: '+esc(lc1(r.usual[0]))+'.</p></section>'+
+      '<section class="card"><h3>What happens next</h3>'+oc.next.map(function(n){return '<div class="check"><span style="color:var(--brand)">'+ICON_TICK+'</span><span>'+n+'</span></div>';}).join('')+
+        (rep.route === 'check' ? '<button type="button" class="btn plain" id="ff">Demo: fast-forward to '+nowTime(rep.deadline)+'</button>' : '')+'</section>'+
+      '<button type="button" class="btn plain copy" id="copy">'+ICON_COPY+' Copy for agent</button>'+
+      (rep.level !== 'red' ? '<button type="button" class="btn outline-red" id="worse">It\'s getting worse: call 999</button>' : '')+
+      '<button type="button" class="btn primary" id="back">Back to my round</button>';
+    if ($('ff')) $('ff').onclick = function(){ fastForward(rep); };
+    $('copy').onclick = function(){ copyFor(rep); };
+    if ($('worse')) $('worse').onclick = function(){ S.current = rep.res; submit(true); };
+    $('back').onclick = function(){ go('round'); };
+  }
+
+  function latestFor(id){ for (var i=0;i<S.reports.length;i++) if (S.reports[i].res===id) return S.reports[i]; return null; }
+
+  function rMine(){
+    header('My reports', S.reports.length+' sent today');
+    if (!S.reports.length) { $('screen').innerHTML = '<div class="card"><span class="name">No reports yet</span><span class="muted">Tap a resident on your round and record a note. Your reports and what happened next show up here.</span></div>'; return; }
+    $('screen').innerHTML = S.reports.map(function(rep){ var r = res(rep.res);
+      return '<div class="card"><span class="row"><span class="name">'+esc(r.name)+'</span><span class="chip '+rep.level+'">'+LEVEL_WORD[rep.level]+'</span></span><span class="muted">'+esc(rep.time)+' · '+ROUTE_WORD[rep.route]+(rep.safeguarding?' · safeguarding':'')+'</span>'+(rep.resolved?'<span class="muted">'+esc(rep.resolved)+'</span>':'')+(rep.done?'<span><b>Nurse update:</b> '+esc(rep.done.label.replace(/^\w+: /,''))+' ('+esc(rep.done.time)+')</span>':'')+'</div>'; }).join('');
+  }
+
+  function rHelp(){
+    header('Help', 'For observers');
+    $('screen').innerHTML =
+      '<section class="card"><h3>If someone is in danger</h3><p style="margin:0">Call <b style="user-select:all">999</b> first. Then tap Report so the nurse team knows.</p></section>'+
+      '<section class="card"><h3>What to report</h3><p style="margin:0">Anything different from their usual self: slower, confused, a fall, curtains closed, no food, a cold home, someone who seems scared.</p></section>'+
+      '<section class="card"><h3>How we decide</h3><p style="margin:0">Each sign adds points. 4 or more: a nurse visits. 2 or 3: a nurse phones. 1: the next visitor checks again. Worries about money, shouting or fear go to the council\'s safeguarding team, not a nurse.</p></section>'+
+      '<section class="card"><h3>If no one answers</h3><p style="margin:0">Just report it and carry on. We check their plans, call them and their key holder, and ask the next visitor to knock. A nurse only goes if no one can reach them.</p></section>'+
+      '<section class="card"><h3>What you don\'t need to do</h3><p style="margin:0">Diagnose anything, go inside, or wait around. A 20-second note is enough. Nurses make the clinical decisions.</p></section>'+
+      '<section class="card"><h3>Demo controls</h3>'+
+        '<label class="switch" for="full"><span>Nurse team full today</span><input type="checkbox" id="full"'+(S.teamFull?' checked':'')+'></label>'+
+        '<span class="muted">Visit slots left today: '+S.slots+' of 12</span>'+
+        '<button type="button" class="btn plain" id="reset">Reset demo</button></section>'+
+      '<p class="note">Prototype with fictional data. In the real product, the triage is done by the Doorstep agent and checked by a nurse.</p>';
+    $('full').onchange = function(e){ S.teamFull = e.target.checked; };
+    $('reset').onclick = resetDemo;
+  }
+
+  function resetDemo(){ S.reports = []; S.seen = {williams:true}; S.slots = 4; S.teamFull = false; S.last = null; S.copyText = null; S.view = 'observer'; go('round'); }
+
+  // ---- Nurse view ----
+  function rNurse(){
+    header('Today\'s queue', 'Elmside urgent community response team');
+    var reps = S.reports, total = reps.length;
+    var done = reps.filter(function(p){ return p.done; });
+    var dc = {visited_home:0, visited_hosp:0, called_ok:0, amb:0};
+    done.forEach(function(p){ dc[p.done.code]++; });
+    var c = {none:0, call:0, visit:0, review:0, red:0, check:0};
+    reps.forEach(function(p){
+      if (p.route === '999') c.red++;
+      else if (p.route === 'nurse') c.visit++;
+      else if (p.route === 'review') c.review++;
+      else if (p.route === 'call') c.call++;
+      else if (p.route === 'check') c.check++;
+      else c.none++;
+    });
+    var rows = [
+      {k:'none', label:'Handled without a nurse', cls:'green'},
+      {k:'check', label:'Still being checked (no nurse yet)', cls:'muted'},
+      {k:'call', label:'Nurse phone call', cls:'amber'},
+      {k:'visit', label:'Nurse visit', cls:'amber'},
+      {k:'review', label:'Senior nurse review (team full)', cls:'amber'},
+      {k:'red', label:'999', cls:'red'}
+    ];
+    var funnel = '<section class="card summary"><div class="row"><h2 class="h2">Today so far</h2><span class="muted">'+total+' report'+(total===1?'':'s')+'</span></div>'+
+      (total ? rows.map(function(row){ var n = c[row.k], pct = total ? Math.round(n/total*100) : 0;
+        return '<div class="frow"><span class="flabel">'+row.label+'</span><span class="fbar"><span class="ffill '+row.cls+'" style="width:'+pct+'%"></span></span><span class="fnum">'+n+'</span></div>'; }).join('')
+        : '<p class="muted" style="margin:0">No reports yet. Switch to Observer, report on a few residents, then come back here.</p>')+
+      (done.length ? '<div class="caps"><span>Outcomes so far: <b>'+dc.visited_home+'</b> visited and safe at home · <b>'+dc.visited_hosp+'</b> sent to hospital · <b>'+dc.called_ok+'</b> calls closed</span></div>' : '')+
+      '<div class="caps"><span><b>'+S.slots+'</b> of 12 visit slots left</span><span>'+(S.teamFull ? 'Team marked full: new visits go to the senior nurse' : 'Daily alert cap: 10')+'</span></div></section>';
+
+    var order = {'999':0,'review':1,'nurse':2,'call':3,'check':4};
+    var queue = reps.filter(function(p){ return order.hasOwnProperty(p.route) && !p.done; }).sort(function(a,b){ return order[a.route]-order[b.route]; });
+    var other = reps.filter(function(p){ return !order.hasOwnProperty(p.route); });
+
+    var qHtml = queue.length ? queue.map(function(p){ var r = res(p.res);
+      return '<article class="card handover"><div class="row"><span class="name">'+esc(r.name)+', '+r.age+'</span><span class="chip '+p.level+'">'+ROUTE_WORD[p.route]+'</span></div>'+
+        '<span class="muted">'+esc(r.addr)+' · reported '+esc(p.time)+'</span>'+
+        (p.signs.length ? '<div class="signs">'+p.signs.map(function(s){ return '<span class="chip todo">'+esc(s)+'</span>'; }).join('')+'</div>' : '')+
+        '<p class="hq">'+esc(p.translated ? p.translated.text+' (translated from '+p.translated.lang+')' : (p.text || 'Quick tags only'))+'</p>'+
+        (p.answer ? '<span class="muted">Follow-up: '+esc(p.answer.q)+' '+esc(p.answer.a)+'</span>' : '')+
+        '<span class="muted">Usually: '+esc(r.usual.map(lc1).join('; '))+'</span>'+
+        (p.why && p.why.length ? '<span class="muted">Score '+p.score+': '+esc(p.why.join(', '))+'</span>' : '')+
+        (p.resolved ? '<span><b>'+esc(p.resolved)+'</b></span>' : '')+
+        '<div class="actions">'+
+          (p.route === 'check' ? '<button type="button" class="btn plain sm" data-ff="'+p.id+'">Fast-forward to '+nowTime(p.deadline)+'</button>' : '')+
+          (p.route === 'nurse' || p.route === 'review' ? doneBtn(p,'visited_home',true)+doneBtn(p,'visited_hosp') : '')+
+          (p.route === 'call' ? doneBtn(p,'called_ok',true)+doneBtn(p,'called_visit') : '')+
+          (p.route === '999' ? doneBtn(p,'amb') : '')+
+          '<button type="button" class="btn plain sm" data-copy="'+p.id+'">'+ICON_COPY+' Copy for agent</button></div>'+
+        '<span class="note" style="text-align:left">The app suggests. The nurse decides.</span></article>'; }).join('')
+      : '<div class="card"><span class="muted">Nothing needs the nurse team right now.</span></div>';
+
+    var dHtml = done.length ? '<section class="card"><h3>Done today</h3>'+done.map(function(p){ var r = res(p.res);
+      return '<div class="row orow"><span>'+esc(r.name)+'</span><span class="muted">'+esc(p.done.label)+' · '+esc(p.done.time)+'</span></div>'; }).join('')+'</section>' : '';
+    var oHtml = other.length ? '<section class="card"><h3>Handled without a nurse</h3>'+other.map(function(p){ var r = res(p.res);
+      return '<div class="row orow"><span>'+esc(r.name)+'</span><span class="muted">'+ROUTE_WORD[p.route]+(p.resolved?' (checked)':'')+'</span></div>'; }).join('')+'</section>' : '';
+
+    $('screen').innerHTML = copyBoxHtml() + '<div class="ngrid"><div class="ncol">'+funnel+dHtml+oHtml+'</div><div class="ncol"><h2 class="h2">Needs the nurse team</h2>'+qHtml+'</div></div>'+
+      '<p class="note">Fictional data. Counts only, no estimated savings.</p>';
+    Array.prototype.forEach.call(document.querySelectorAll('[data-copy]'), function(b){ b.onclick = function(){ copyFor(byId(+b.getAttribute('data-copy'))); }; });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-ff]'), function(b){ b.onclick = function(){ fastForward(byId(+b.getAttribute('data-ff'))); }; });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-done]'), function(b){ b.onclick = function(){ var v = b.getAttribute('data-done').split('|'); markDone(byId(+v[0]), v[1]); }; });
+  }
+  var DONE_WORD = {visited_home:'Visited: safe at home', visited_hosp:'Visited: sent to hospital', called_ok:'Called: no visit needed', called_visit:'Called: book a visit', amb:'Ambulance attended'};
+  function doneBtn(p, code, main){ return '<button type="button" class="btn '+(main?'primary':'plain')+' sm" data-done="'+p.id+'|'+code+'">'+DONE_WORD[code]+'</button>'; }
+  function markDone(rep, code){
+    if (code === 'called_visit') {
+      if (S.teamFull || S.slots <= 0) rep.route = 'review'; else { S.slots--; rep.route = 'nurse'; }
+      render(); toast(rep.route === 'nurse' ? 'Visit booked' : 'Team full: sent to the senior nurse'); return;
+    }
+    rep.done = {code:code, label:DONE_WORD[code], time:nowTime(0)};
+    render(); toast('Saved: '+DONE_WORD[code]);
+  }
+  function byId(id){ for (var i=0;i<S.reports.length;i++) if (S.reports[i].id===id) return S.reports[i]; }
+
+  $('vb-observer').onclick = function(){ setView('observer'); };
+  $('vb-nurse').onclick = function(){ setView('nurse'); };
+  Array.prototype.forEach.call(document.querySelectorAll('[data-go]'), function(b){ b.onclick = function(){
+    var g = b.getAttribute('data-go'); if (g === 'report') { var n = nextId(); S.current = n || S.current; S.tags = []; S.draft=''; S.fromVoice=false; } go(g); }; });
+  render();
+})();
+</script>
+</body></html>
